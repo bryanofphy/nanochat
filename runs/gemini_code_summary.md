@@ -17,6 +17,16 @@ This script represents the culmination of all optimizations in the repo. Its goa
 4.  **Data Ratio**: `--target-param-data-ratio=8.25`.
     *   **Why:** Standard Chinchilla scaling suggests ~20. However, "over-training" a smaller model (using more data than optimal) is often cheaper at inference time. Nanochat uses ~8.25-10.5 depending on the exact run, finding a sweet spot where the model is highly capable but training fits in the 3-hour window.
 
+## `miniseries.sh`: The "Sweeper"
+
+This script is designed to run a **Miniseries** of experiments—training multiple models of increasing depth (e.g., d12, d14, ... d26) to collect data for scaling laws or validation.
+
+*   **Purpose:** To systematically verify that architectural changes work across *all* scales, not just for small or large models.
+*   **Workflow:**
+    *   Iterates through depths `[12, 14, 16, 18, 20, 22, 24, 26]`.
+    *   Automatically adjusts `--device-batch-size` to prevent Out-Of-Memory (OOM) errors as models get larger.
+    *   Logs key metrics (CORE score, Val BPB, Training Time) to a CSV file (`results.csv`) for easy plotting.
+
 ### `scaling_laws.sh`: The Research Lab
 
 This script runs a sweep of smaller models (d12, d16, d20) to generate the data points used to derive the formulas in `base_train.py`.

@@ -56,7 +56,19 @@ AdamW treats every parameter individually. For large 2D matrices (like the $W_q,
 
 ---
 
-## 3. `engine.py`: High-Performance Inference
+## 3. `fp8.py`: Minimal FP8 Training Support
+
+This module provides a drop-in replacement for `torchao`'s FP8 training capability, implemented in ~150 lines of pure PyTorch.
+
+### Key Features
+*   **Tensor-wise Scaling**: Implements "tensor-wise" dynamic scaling (one scale factor per tensor), which is faster than "row-wise" scaling on H100 GPUs.
+*   **Custom Autograd Function**: `_Float8Matmul` handles the quantization (casting to `e4m3fn` or `e5m2`), matrix multiplication (via `torch._scaled_mm`), and backward pass gradient computation.
+*   **`Float8Linear`**: A drop-in replacement for `nn.Linear` that keeps weights in high precision (BF16) but performs the expensive matrix multiplication in FP8.
+*   **Simplicity**: Avoids the complexity of Tensor Subclasses used in `torchao`, making it easier to compile with `torch.compile` as a single opaque node.
+
+---
+
+## 4. `engine.py`: High-Performance Inference
 
 Training is only half the story. `engine.py` implements the text generation loop.
 
