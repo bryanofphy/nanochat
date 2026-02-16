@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nanochat Architecture Explained</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+            --code-bg: #1e1e1e;
+            --accent: #10b981;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        h1, h2, h3 {
+            color: var(--secondary-color);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--primary-color);
+            color: white;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        tr:hover {
+            background-color: #f1f5f9;
+        }
+
+        code {
+            background-color: #e2e8f0;
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25em 0.6em;
+            font-size: 0.75em;
+            font-weight: 700;
+            line-height: 1;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: baseline;
+            border-radius: 0.25rem;
+            background-color: var(--accent);
+            color: white;
+        }
+
+        .highlight {
+            background-color: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+    </style>
+    <!-- Mermaid JS for diagrams -->
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+    </script>
+</head>
+<body>
+
+    <header>
+        <h1>Nanochat vs. GPT-2: The Evolution</h1>
+        <p>This document visualizes why <code>nanochat</code> represents a 5-year leap in efficiency over the original GPT-2 architecture, enabling the training of LLMs for under $100.</p>
+    </header>
+
+    <section class="card">
+        <h2>1. The High-Level Comparison</h2>
+        <p>Nanochat is not just a reimplementation; it's a modernization. Every component has been swapped for a more efficient counterpart found in research from 2019-2026.</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Feature</th>
+                    <th>Original GPT-2 (2019)</th>
+                    <th>NanoGPT (2023)</th>
+                    <th>Nanochat (2026)</th>
+                    <th>Technical "Why" (Deep Dive)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Optimizer</strong></td>
+                    <td>Adam (FP32)</td>
+                    <td>AdamW (BF16)</td>
+                    <td><strong>Muon + AdamW</strong></td>
+                    <td>Newton-Schulz iteration maintains matrix <strong>spectral radius ≈ 1</strong>. This stability allows taking updates with 30x higher energy (LR=0.02) without diverging.</td>
+                </tr>
+                <tr>
+                    <td><strong>Attention</strong></td>
+                    <td>O(N²) Math</td>
+                    <td>Flash Attention 2</td>
+                    <td><strong>Flash Attention 3</strong></td>
+                    <td>Utilizes Hopper's <strong>asynchronous TMA</strong> and warp-specialization to overlap compute with data movement, doubling SRAM throughput over FA2.</td>
+                </tr>
+                <tr>
+                    <td><strong>Positioning</strong></td>
+                    <td>Absolute</td>
+                    <td>Absolute</td>
+                    <td><strong>Rotary (RoPE)</strong></td>
+                    <td>Rotates Q/K pairs in the complex plane. This preserves <strong>inner-product decay</strong> relative to distance, allowing better length extrapolation than static maps.</td>
+                </tr>
+                <tr>
+                    <td><strong>Normalization</strong></td>
+                    <td>LayerNorm (+Bias)</td>
+                    <td>LayerNorm (-Bias)</td>
+                    <td><strong>RMSNorm</strong></td>
+                    <td>Removing mean-centering saves O(N) ops. Implementation is <strong>purely functional</strong> (no affine weights), reducing memory bandwidth and param count.</td>
+                </tr>
+                <tr>
+                    <td><strong>Activation</strong></td>
+                    <td>GeLU</td>
+                    <td>New GeLU</td>
+                    <td><strong>ReLU²</strong></td>
+                    <td>Second-order curvature provides smoother gradients than ReLU without the expensive <code>exp</code>/<code>tanh</code> of GeLU. Better <strong>loss-per-second</strong> at GPT-2 scale.</td>
+                </tr>
+                <tr>
+                    <td><strong>Shortcut</strong></td>
+                    <td>Residual Only</td>
+                    <td>Residual Only</td>
+                    <td><strong>x0 + Residual</strong></td>
+                    <td>Directly blends input embeddings into every layer. This mitigates <strong>residual noise washout</strong> and gradient vanishing in very deep stacks.</td>
+                </tr>
+                <tr>
+                    <td><strong>Capacity</strong></td>
+                    <td>Standard</td>
+                    <td>Standard</td>
+                    <td><strong>Value Embeddings</strong></td>
+                    <td><strong>Decouples Param Count from FLOPs</strong>. Injects facts via V-stream table lookups without increasing the O(d²) cost of matrix projections.</td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section class="card">
+        <h2>2. Architecture Visualized: The Data Path</h2>
+        <p>The Nanochat architecture (in <code>gpt.py</code>) introduces shortcuts and extra capacity that GPT-2 lacked. Note the <strong>x0 shortcut</strong> and <strong>Value Embeddings</strong>.</p>
+        
+        <div class="diagram-container">
+            <div class="mermaid">
+            graph TD
+                Input["Token IDs"] --> WTE["Token Embeddings"]
+                WTE --> Norm1["RMSNorm (Functional)"]
+                Norm1 --> x0_store("Save x0 State")
+                
+                subgraph "Transformer Block (Repeated N times)"
+                    InputSignal --> Mix1((+))
+                    x0_store -.->|x0_lambda| Mix1
+                    Mix1 --> PreNorm["RMSNorm"]
+                    
+                    subgraph "Attention Mechanism"
+                        PreNorm --> Q_Proj["Q Projection"]
+                        PreNorm --> K_Proj["K Projection"]
+                        PreNorm --> V_Proj["V Projection"]
+                        
+                        Q_Proj --> RoPE["Rotary Emb"]
+                        K_Proj --> RoPE
+                        
+                        ValueEmbeds["Value Embeddings Table"] -.->|"+ Gate"| V_Proj
+                        
+                        RoPE --> FA3["Flash Attention 3"]
+                        V_Proj --> FA3
+                    end
+                    
+                    FA3 --> ResidMix((+))
+                    Mix1 --> ResidMix
+                    
+                    ResidMix --> MLP_Norm["RMSNorm"]
+                    MLP_Norm --> MLP["MLP: ReLU²"]
+                    MLP --> OutputMix((+))
+                    ResidMix --> OutputMix
+                end
+                
+                OutputMix --> FinalNorm["RMSNorm"]
+                FinalNorm --> LM_Head["LM Head"]
+                LM_Head --> Logits
+            </div>
+        </div>
+
+        <div class="highlight">
+            <strong>Key Innovation: Value Embeddings</strong><br>
+            Note the <code>Value Embeddings Table</code> injecting data into the V path. This allows the model to "memorize" more information without making the expensive matrix multiplications (Q, K, V projections) larger. It's "cheap" capacity.
+        </div>
+    </section>
+
+    <section class="card">
+        <h2>3. The "Muon" Optimizer Effect</h2>
+        <p>The standard AdamW optimizer updates every parameter independently. Muon updates 2D matrices as a whole, forcing updates to be orthogonal. This is implemented in <code>optim.py</code>.</p>
+
+        <div class="diagram-container">
+            <div class="mermaid">
+            flowchart LR
+                subgraph AdamW ["Standard AdamW"]
+                    G1["Gradient"] --> M1["Momentum"]
+                    M1 --> S1["Scale by 1/sqrt(v)"]
+                    S1 --> U1["Update Weight"]
+                    style S1 fill:#f9f,stroke:#333,stroke-width:2px
+                end
+
+                subgraph Muon ["Muon Optimizer"]
+                    G2["Gradient"] --> M2["Momentum"]
+                    M2 --> NS["Newton-Schulz Orthogonalization"]
+                    NS --> U2["Update Matrix"]
+                    style NS fill:#10b981,stroke:#333,stroke-width:4px,color:white
+                end
+            </div>
+        </div>
+        <p><strong>Why it matters:</strong> The Newton-Schulz step cleans up the internal structure of the weight matrices. This allows us to use learning rates (e.g., 0.02) that are <strong>~30x higher</strong> than what AdamW can tolerate (0.0006), leading to much faster convergence.</p>
+    </section>
+
+    <section class="card">
+        <h2>4. Training Logic: Scaling Laws</h2>
+        <p>In <code>scripts/base_train.py</code>, hyperparameters are not guessed; they are calculated.</p>
+
+        <table>
+            <tr>
+                <th>Hyperparameter</th>
+                <th>Nanochat Logic</th>
+                <th>Result</th>
+            </tr>
+            <tr>
+                <td><strong>Training Duration</strong></td>
+                <td><code>TargetTokens = 10.5 * Params</code></td>
+                <td>Ensures compute-optimality (Chinchilla-style).</td>
+            </tr>
+            <tr>
+                <td><strong>Batch Size</strong></td>
+                <td><code>BatchSize ∝ Depth^0.383</code></td>
+                <td>Larger models get larger batches (Power Laws).</td>
+            </tr>
+            <tr>
+                <td><strong>Learning Rate</strong></td>
+                <td><code>LR ∝ sqrt(BatchSize)</code></td>
+                <td>Compensates for larger batches with larger steps.</td>
+            </tr>
+            <tr>
+                <td><strong>Weight Decay</strong></td>
+                <td><code>WD ∝ 1 / Width^2</code></td>
+                <td>Wider models get stricter regularization.</td>
+            </tr>
+        </table>
+    </section>
+
+</body>
+</html>

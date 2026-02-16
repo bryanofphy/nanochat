@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nanochat vs NanoGPT Architecture Comparison</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --secondary-color: #1e40af;
+            --bg-color: #f8fafc;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+            --card-bg: #ffffff;
+            --nanochat-accent: #10b981; /* Green for new/optimized */
+            --nanogpt-accent: #64748b; /* Grey/Blue for standard */
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 2rem;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--secondary-color);
+            margin-bottom: 2rem;
+            font-size: 2.5rem;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-header {
+            text-align: center;
+            border-bottom: 2px solid var(--border-color);
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        .nanogpt-header { border-color: var(--nanogpt-accent); color: var(--nanogpt-accent); }
+        .nanochat-header { border-color: var(--nanochat-accent); color: var(--nanochat-accent); }
+
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            background: #fff;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+
+        /* Mermaid styling tweaks */
+        .mermaid { width: 100%; text-align: center; }
+
+        .comparison-table {
+            max-width: 1000px;
+            margin: 3rem auto;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        .comparison-table th, .comparison-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: left;
+        }
+
+        .comparison-table th {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .highlight-diff {
+            font-weight: bold;
+            color: var(--nanochat-accent);
+        }
+
+    </style>
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+    </script>
+</head>
+<body>
+
+    <h1>Evolution of GPT Architecture: 2018 - 2026</h1>
+
+    <h2 style="text-align: center; color: var(--nanogpt-accent);">Legacy Evolution (2018 - 2020)</h2>
+    <div class="container" style="grid-template-columns: 1fr 1fr 1fr;">
+        
+        <!-- GPT-1 Column -->
+        <div class="card">
+            <div class="card-header" style="border-color: #94a3b8; color: #94a3b8;">
+                <h2>GPT-1 (2018)</h2>
+                <p>Post-Norm (Standard Transformer)</p>
+            </div>
+            <div class="diagram-container">
+                <div class="mermaid">
+                graph TD
+                    Input["Token IDs"] --> WTE["Token Embeddings"]
+                    Input --> WPE["Pos Embeddings (Absolute)"]
+                    WTE --> AddEmb((+))
+                    WPE --> AddEmb
+                    AddEmb --> Drop["Dropout"]
+                    
+                    subgraph "Transformer Block (Repeated N times)"
+                        Drop --> Attn["Masked Self-Attention"]
+                        Attn --> Add1((+))
+                        Drop --> Add1
+                        Add1 --> LN1["LayerNorm (Post-Norm)"]
+                        
+                        LN1 --> MLP["MLP: Linear 4x + GeLU"]
+                        MLP --> Add2((+))
+                        LN1 --> Add2
+                        Add2 --> LN2["LayerNorm (Post-Norm)"]
+                    end
+                    
+                    LN2 --> LM_Head["LM Head"]
+                    LM_Head --> Logits
+                </div>
+            </div>
+            <p style="text-align: center; font-size: 0.85em; color: #666; margin-top: 1rem;">
+                <em>GPT-1 used the original <strong>Post-Norm</strong> setup where LayerNorm is applied <strong>after</strong> the residual addition.</em>
+            </p>
+        </div>
+
+        <!-- Original GPT-2 Column -->
+        <div class="card">
+            <div class="card-header" style="border-color: #64748b; color: #64748b;">
+                <h2>GPT-2 (2019)</h2>
+                <p>The Shift to Pre-Norm</p>
+            </div>
+            <div class="diagram-container">
+                <div class="mermaid">
+                graph TD
+                    Input["Token IDs"] --> WTE["Token Embeddings"]
+                    Input --> WPE["Pos Embeddings (Absolute)"]
+                    WTE --> AddEmb((+))
+                    WPE --> AddEmb
+                    AddEmb --> Drop["Dropout"]
+                    
+                    subgraph "Transformer Block (Repeated N times)"
+                        Drop --> LN1["LayerNorm (Pre-Norm)"]
+                        LN1 --> Attn["Self-Attention (Conv1D)"]
+                        Attn --> Add1((+))
+                        Drop --> Add1
+                        
+                        Add1 --> LN2["LayerNorm (Pre-Norm)"]
+                        LN2 --> MLP["MLP (Conv1D)"]
+                        MLP --> Add2((+))
+                        Add1 --> Add2
+                    end
+                    
+                    Add2 --> FinalLN["Final LayerNorm"]
+                    FinalLN --> LM_Head["LM Head"]
+                    LM_Head --> Logits
+                </div>
+            </div>
+        </div>
+
+        <!-- GPT-3 Column -->
+        <div class="card">
+            <div class="card-header" style="border-color: #8b5cf6; color: #8b5cf6;">
+                <h2>GPT-3 (2020)</h2>
+                <p>Scale & Sparse Attention</p>
+            </div>
+            <div class="diagram-container">
+                <div class="mermaid">
+                graph TD
+                    Input["Token IDs"] --> WTE["Token Embeddings"]
+                    Input --> WPE["Pos Embeddings (Absolute)"]
+                    WTE --> AddEmb((+))
+                    WPE --> AddEmb
+                    AddEmb --> Drop["Dropout"]
+                    
+                    subgraph "Transformer Block (Repeated N times)"
+                        Drop --> LN1["LayerNorm (Pre-Norm)"]
+                        LN1 --> SparseAttn["Alternating Dense/Sparse Attn"]
+                        SparseAttn --> Add1((+))
+                        Drop --> Add1
+                        
+                        Add1 --> LN2["LayerNorm (Pre-Norm)"]
+                        LN2 --> MLP["MLP"]
+                        MLP --> Add2((+))
+                        Add1 --> Add2
+                    end
+                    
+                    Add2 --> FinalLN["Final LayerNorm"]
+                    FinalLN --> LM_Head["LM Head"]
+                    LM_Head --> Logits
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2 style="text-align: center; color: var(--nanochat-accent); margin-top: 4rem;">Modern Optimization (2023 - 2026)</h2>
+    <div class="container">
+        
+        <!-- NanoGPT Column -->
+        <div class="card">
+            <div class="card-header nanogpt-header">
+                <h2>NanoGPT (Baseline)</h2>
+                <p>Clean GPT-2 Implementation</p>
+            </div>
+            <div class="diagram-container">
+                <div class="mermaid">
+                graph TD
+                    Input["Token IDs"] --> WTE["Token Embeddings"]
+                    Input --> WPE["Pos Embeddings (Absolute)"]
+                    WTE --> AddEmb((+))
+                    WPE --> AddEmb
+                    AddEmb --> Drop["Dropout"]
+                    
+                    subgraph "Transformer Block"
+                        Drop --> LN1["LayerNorm"]
+                        LN1 --> Attn["Flash Attn 2"]
+                        Attn --> Add1((+))
+                        Drop --> Add1
+                        
+                        Add1 --> LN2["LayerNorm"]
+                        LN2 --> MLP["MLP (GeLU)"]
+                        MLP --> Add2((+))
+                        Add1 --> Add2
+                    end
+                    
+                    Add2 --> FinalLN["Final LayerNorm"]
+                    FinalLN --> LM_Head["LM Head"]
+                </div>
+            </div>
+        </div>
+
+        <!-- Nanochat Column -->
+        <div class="card">
+            <div class="card-header nanochat-header">
+                <h2>Nanochat (Optimized)</h2>
+                <p>The 2026 Efficiency Frontier</p>
+            </div>
+            <div class="diagram-container">
+                <div class="mermaid">
+                graph TD
+                    Input["Token IDs"] --> WTE["Token Embeddings"]
+                    WTE --> Norm1["RMSNorm (Functional)"]
+                    Norm1 --> x0_store("Save x0 State")
+                    
+                    subgraph "Transformer Block"
+                        InputSignal --> Mix1((+))
+                        x0_store -.->|x0_lambda| Mix1
+                        Mix1 --> PreNorm["RMSNorm"]
+                        
+                        subgraph "Modern Attention"
+                            PreNorm --> Proj["Q/K/V Proj"]
+                            Proj --> RoPE["Rotary Emb"]
+                            ValueEmbeds["Value Embeds"] -.->|"+ Gate"| Proj
+                            RoPE --> FA3["Flash Attention 3"]
+                        end
+                        
+                        FA3 --> ResidMix((+))
+                        Mix1 --> ResidMix
+                        
+                        ResidMix --> MLP_Norm["RMSNorm"]
+                        MLP_Norm --> MLP["MLP (ReLU²)"]
+                        MLP --> OutputMix((+))
+                        ResidMix --> OutputMix
+                    end
+                    
+                    OutputMix --> FinalNorm["RMSNorm"]
+                    FinalNorm --> LM_Head["LM Head"]
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <table class="comparison-table">
+        <thead>
+            <tr>
+                <th>Feature</th>
+                <th>GPT-1 (2018)</th>
+                <th>GPT-2/3 (2019/20)</th>
+                <th>Nanochat (2026)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Normalization</strong></td>
+                <td>Post-Norm</td>
+                <td>Pre-Norm</td>
+                <td class="highlight-diff">RMSNorm (Functional)</td>
+            </tr>
+            <tr>
+                <td><strong>Positioning</strong></td>
+                <td>Absolute Learned</td>
+                <td>Absolute Learned</td>
+                <td class="highlight-diff">Rotary (RoPE)</td>
+            </tr>
+            <tr>
+                <td><strong>Attention</strong></td>
+                <td>Standard</td>
+                <td>Dense / Sparse</td>
+                <td class="highlight-diff">Flash Attention 3</td>
+            </tr>
+            <tr>
+                <td><strong>Activation</strong></td>
+                <td>GeLU</td>
+                <td>GeLU</td>
+                <td class="highlight-diff">ReLU²</td>
+            </tr>
+            <tr>
+                <td><strong>Residuals</strong></td>
+                <td>Standard</td>
+                <td>Standard</td>
+                <td class="highlight-diff">x0 + Residual Mix</td>
+            </tr>
+        </tbody>
+    </table>
+        <thead>
+            <tr>
+                <th>Component</th>
+                <th>NanoGPT (Standard)</th>
+                <th>Nanochat (Optimized)</th>
+                <th>Why Change?</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Positioning</strong></td>
+                <td>Absolute Learned (WPE)</td>
+                <td class="highlight-diff">Rotary (RoPE)</td>
+                <td>Better extrapolation to longer contexts; relative distance matters more than absolute position.</td>
+            </tr>
+            <tr>
+                <td><strong>Normalization</strong></td>
+                <td>LayerNorm (Mean & Var)</td>
+                <td class="highlight-diff">RMSNorm (Scale only)</td>
+                <td>Simpler, faster, less memory bandwidth (no mean calculation), numerically stable.</td>
+            </tr>
+            <tr>
+                <td><strong>Attention</strong></td>
+                <td>Standard / Flash 2</td>
+                <td class="highlight-diff">Flash Attention 3</td>
+                <td>Exploits H100 asynchronous data movement (TMA) for higher GPU utilization.</td>
+            </tr>
+            <tr>
+                <td><strong>Shortcuts</strong></td>
+                <td>Standard Residual (x + f(x))</td>
+                <td class="highlight-diff">x0 + Residual</td>
+                <td>Mixing original input (x0) at every layer improves gradient flow in deep networks.</td>
+            </tr>
+            <tr>
+                <td><strong>Capacity</strong></td>
+                <td>Weights only</td>
+                <td class="highlight-diff">Value Embeddings</td>
+                <td>Adds "cheap" memory capacity without expensive matrix multiplications.</td>
+            </tr>
+            <tr>
+                <td><strong>Activation</strong></td>
+                <td>GeLU</td>
+                <td class="highlight-diff">ReLU²</td>
+                <td>Simpler to compute than GeLU (no exp/tanh) but smoother than ReLU.</td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>
