@@ -152,3 +152,5 @@ Adam is essentially: "Go in the direction of the gradient (`m`), but slow down i
 5.  **Predict:** Turn vector back into probabilities.
 
 All implemented with `+`, `*`, and `pow`. No magic.
+
+$\nablaW=(\nablaY)^T\cdotX$
